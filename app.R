@@ -39,12 +39,6 @@ staatsausgaben_long <- staatsausgaben %>%
   )
 
 
-# BIP Kantonal
-bip_kantonal <- read_excel("data/bip_kanton.xlsx", sheet = 1)
-
-
-
-
 
 # User Interface ----
 ui <- page_navbar(
