@@ -5,7 +5,7 @@ library(scales)
 library(readxl)
 library(plotly)
 
-
+# Data wrangling ----
 
 # BIP pro Kopf Datensatz
 data <- readxl::read_excel("data/datenbank.xlsx", sheet = 1)
@@ -39,11 +39,52 @@ staatsausgaben_long <- staatsausgaben %>%
   )
 
 
+# Index der Zentralbankunabhängigkeit
+cbi_data <- read_xlsx("data/CBIData_Romelli_2024.xlsx", sheet = 2)
+
+cbi_data <- cbi_data %>%
+  select(country, year, cbie_index) %>%
+  filter(year >= 1980,
+         country %in% c("Switzerland", "Germany", "France", "Norway", "Argentina", "Brazil")) %>%
+  rename("CBI Index" = "cbie_index",
+         "Jahr" = "year")
+
+
 
 # User Interface ----
 ui <- page_navbar(
   title = "Shining",
-  nav_panel(title = "Seite 1",
+  nav_panel(title = "Willkommen",
+            page_fillable(
+              layout_columns(
+                layout_column_wrap(
+                  width = 1,
+                  card(
+                    card_header("Hi there"),
+                    card_body("Hier kommt ein bisschen Text")
+                  )
+                ),
+                layout_column_wrap(
+                  width = 1,
+                  card(
+                    card_header("Ein Graph, welcher mir gefällt"),
+                    card_image("data/ft_gender_divergence.jpg",
+                               style = "display: block; margin-left: auto; margin-right: auto; width: 70%;",
+                               href = "https://www.ft.com/content/29fd9b5c-2f35-41bf-9d4c-994db4e12998"),
+                    card_body("Diese graphische Aufarbeitung von John Rupert-Murdoch bringt ein Phänomen auf den Punkt, 
+                              welches für mich als jungen Mann von grossem Interesse ist."),
+                    card_footer("Quelle: Financial Times"),
+                    style = "background-color: #FFF1E0"
+                  ),
+                  card(
+                    card_header("Yapp"),
+                    card_body("some yapping")
+                  )
+                ),
+                col_widths = c(4,8)
+              )
+            )),
+  nav_panel(title = "Ökonomisches",
             navset_card_tab(
               nav_panel(title = "BIP pro Kopf",
                         layout_sidebar(
@@ -62,15 +103,19 @@ ui <- page_navbar(
               nav_panel(title = "BIP lange Frist",
                         plotlyOutput(outputId = "bip_lange_frist") # Plotly Output
               ),
+              nav_panel(title = "Zentralbankunabhängigkeit",
+                        plotlyOutput(outputId = "zentralbank"))
+            )
+              
+          
+  ),
+  nav_panel(title = "Politisches",
+            navset_card_pill(
               nav_panel(title = "Bundesratsparteien",
                         plotlyOutput(outputId = "bundesratsparteien")
-              ),
-              nav_panel(title = "Staatsausgaben",
-                        plotlyOutput(outputId = "staatsausgaben")
-            )
-            )
-  ),
-  nav_panel(title = "Seite 2") # Seite 2
+            ))),
+  nav_spacer(),
+  nav_item(input_dark_mode())
 )
 
 
@@ -189,6 +234,21 @@ server <- function(input, output){
     ggplotly(plot4)
   })
   
+  
+  # Seite 1, Plot 5
+  output$zentralbank <- renderPlotly({
+    plot_cbi <- ggplot(cbi_data, aes(x = Jahr, y = `CBI Index`)) +
+      geom_line(color = "coral3") +
+      theme_minimal(base_size = 15) +
+      labs(
+        title = "Entwicklung der Zentralbankunabhängigkeit",
+        x = "Jahr",
+        y = "Zentralbankunabhängigkeitsindex"
+      ) +
+      facet_wrap(~country)
+    
+    ggplotly(plot_cbi)
+  })
   
 }
 
