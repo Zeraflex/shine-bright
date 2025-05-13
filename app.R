@@ -50,6 +50,21 @@ cbi_data <- cbi_data %>%
          "Jahr" = "year")
 
 
+# Stadt Zürich Hundenamen 2024 top10
+zh_dogs <- read_csv("https://data.stadt-zuerich.ch/dataset/sid_stapo_hundenamen_od1002/download/KUL100OD1002.csv")
+zh_dogs <- zh_dogs %>%
+  select(StichtagDatJahr, HundenameText, AnzHunde) %>%
+  filter(StichtagDatJahr == 2024)
+
+zh_dogs_sum <- zh_dogs %>%
+  group_by(HundenameText) %>%
+  summarise(total = sum(AnzHunde), .groups = "drop")
+
+zh_dogs_final <- zh_dogs_sum %>%
+  arrange(desc(total)) %>%
+  slice_head(n = 10)
+
+
 
 # User Interface ----
 ui <- page_navbar(
@@ -113,7 +128,29 @@ ui <- page_navbar(
             navset_card_pill(
               nav_panel(title = "Bundesratsparteien",
                         plotlyOutput(outputId = "bundesratsparteien")
-            ))),
+              ),
+              nav_panel(title = "Staatsausgaben",
+                        plotlyOutput(outputId = "staatsausgaben"))
+            )),
+  nav_panel(title = "Diverses",
+            navset_pill(
+              nav_panel(
+                title = "Hundenamen",
+                layout_columns(
+                  card(plotOutput(outputId = "hundenamen")),
+                  card(
+                    card_header("Wie einzigartig ist mein Hund?"),
+                    card_body(
+                      textInput("meinhund", 
+                                "Gib deinen Hundenamen ein und finde heraus, 
+                                wie oft er in Zürich vorkommt!", 
+                                placeholder = "Mein Hundenamen"),
+                      textOutput("anzahl_hundenamen")
+                    )
+                  )
+                )
+              )
+            )),
   nav_spacer(),
   nav_item(input_dark_mode())
 )
@@ -202,8 +239,7 @@ server <- function(input, output){
   })
   
   
-  # Seite 1, Plot 4
-  
+  # Seite Poltio, Plot: Staatsausgaben
   output$staatsausgaben <- renderPlotly({
     plot4 <- ggplot(staatsausgaben_long, aes(x = Jahr, y = Ausgaben, fill = Ausgabengebiet)) +
       geom_area() +
@@ -235,7 +271,7 @@ server <- function(input, output){
   })
   
   
-  # Seite 1, Plot 5
+  # Seite Econ, Plot: Zentralbankunabhängigkeit
   output$zentralbank <- renderPlotly({
     plot_cbi <- ggplot(cbi_data, aes(x = Jahr, y = `CBI Index`)) +
       geom_line(color = "coral3") +
@@ -249,6 +285,36 @@ server <- function(input, output){
     
     ggplotly(plot_cbi)
   })
+  
+  # Seite: Diverses, Plot: Hundenamen
+  output$hundenamen <- renderPlot({
+    ggplot(zh_dogs_final, aes(x = reorder(HundenameText, total), y = total)) +
+      geom_col(fill = "blue4") +
+      geom_text(aes(label = total), vjust = 2, color = "white") +
+      labs(
+        x = "Hundenamen",
+        y = "Anzahl",
+        title = "Zürichs beliebteste Hundenamen 2024"
+      ) +
+      theme_minimal(base_size = 15)
+  })
+  
+  # Seite: Diverses, Text: Anzahl Hundenamen
+ text_ausgabe <- reactive({
+   eingegebener_name <- input$meinhund # Var für eingegebenen Namen
+   
+   reihenmatch <- zh_dogs_sum %>% 
+     filter(HundenameText == eingegebener_name) # Erstellt neuen df mit nur der Zeile des eingegebenen Namens
+   
+   if (nrow(reihenmatch) == 0){
+     paste("Dieser Hundename kommt nicht im Datensatz vor")
+   } else{
+     paste("Dein Hundename kommt", reihenmatch$total, "Mal in Zürich vor.")
+   }
+ })
+  
+ output$anzahl_hundenamen <- renderText({text_ausgabe()})
+  
   
 }
 
