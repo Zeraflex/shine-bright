@@ -75,25 +75,34 @@ ui <- page_navbar(
                 layout_column_wrap(
                   width = 1,
                   card(
-                    card_header("Hi there"),
-                    card_body("Hier kommt ein bisschen Text")
+                    card_header("Salli!"),
+                    card_body("Disclaimer: Diese App ist ein sich im Aufbau befindender Spielplatz
+                              für R Shiny und soll nicht zu ernst genommen werden. 
+                              Die verwendeten Daten sind alle Open Source. Viel Spass!"),
+                    style = "background-color: #94ebff"
                   )
                 ),
                 layout_column_wrap(
                   width = 1,
                   card(
-                    card_header("Ein Graph, welcher mir gefällt"),
+                    card_header("Ein tolle datenjournalistische Story"),
                     card_image("data/ft_gender_divergence.jpg",
                                style = "display: block; margin-left: auto; margin-right: auto; width: 70%;",
                                href = "https://www.ft.com/content/29fd9b5c-2f35-41bf-9d4c-994db4e12998"),
-                    card_body("Diese graphische Aufarbeitung von John Rupert-Murdoch bringt ein Phänomen auf den Punkt, 
-                              welches für mich als jungen Mann von grossem Interesse ist."),
+                    card_body("Graphische Aufarbeitung von John Rupert-Murdoch"),
                     card_footer("Quelle: Financial Times"),
                     style = "background-color: #FFF1E0"
                   ),
                   card(
-                    card_header("Yapp"),
-                    card_body("some yapping")
+                    card_header("Irgende Inhalt"),
+                    card_body("Lorem ipsum dolor sit amet, consetetur sadipscing elitr, 
+                              sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, 
+                              sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. 
+                              Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. 
+                              Lorem ipsum dolor sit amet, consetetur sadipscing elitr, 
+                              sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, 
+                              sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. 
+                              Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.")
                   )
                 ),
                 col_widths = c(4,8)
