@@ -131,7 +131,7 @@ ui <- page_navbar(
                     card_image("data/ft_gender_divergence.jpg",
                                style = "display: block; margin-left: auto; margin-right: auto; width: 70%;",
                                href = "https://www.ft.com/content/29fd9b5c-2f35-41bf-9d4c-994db4e12998"),
-                    card_body("Graphische Aufarbeitung von John Rupert-Murdoch"),
+                    card_body("Graphische Aufarbeitung von John Burn-Murdoch"),
                     card_footer("Quelle: Financial Times"),
                     style = "background-color: #FFF1E0"
                   ),
