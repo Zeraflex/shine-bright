@@ -4,6 +4,9 @@ library(tidyverse)
 library(scales)
 library(readxl)
 library(plotly)
+library(paletteer)
+
+
 
 # Data wrangling ----
 
@@ -63,6 +66,45 @@ zh_dogs_sum <- zh_dogs %>%
 zh_dogs_final <- zh_dogs_sum %>%
   arrange(desc(total)) %>%
   slice_head(n = 10)
+
+
+# Stadt Zürich Wohnungsproblematik
+api_zhwhg <- "https://data.stadt-zuerich.ch/api/3/action/datastore_search?resource_id=c22f8f30-ab9f-486b-a332-c6fe19e4e50f&limit=15000"
+leerwohnungen <- fromJSON(content(GET(api_zhwhg), "text", encoding = "UTF-8"))$result$records
+leerwohnungen <- leerwohnungen %>%
+  select(StichtagDat, KreisSort, AnzWhgStatLeer_noDM, AnzWhgStat) %>%
+  mutate(
+    StichtagDat = case_match(StichtagDat,
+                             "2009-06-01" ~ 2009,
+                             "2010-06-01" ~ 2010,
+                             "2011-06-01" ~ 2011,
+                             "2012-06-01" ~ 2012,
+                             "2013-06-01" ~ 2013,
+                             "2014-06-01" ~ 2014,
+                             "2015-06-01" ~ 2015,
+                             "2016-06-01" ~ 2016,
+                             "2017-06-01" ~ 2017,
+                             "2018-06-01" ~ 2018,
+                             "2019-06-01" ~ 2019,
+                             "2020-06-01" ~ 2020,
+                             "2021-06-01" ~ 2021,
+                             "2022-06-01" ~ 2022,
+                             "2023-06-01" ~ 2023,
+                             "2024-06-01" ~ 2024)
+  )
+
+leerwohnungen <- leerwohnungen %>%
+  group_by(StichtagDat, KreisSort) %>%
+  summarise(AnzLeerWhg = sum(as.numeric(AnzWhgStatLeer_noDM)), 
+            AnzWhg = sum(as.numeric(AnzWhgStat)),
+            .groups = "drop") %>%
+  mutate(Leerwohnungsziffer = (AnzLeerWhg / AnzWhg) * 100) %>%
+  rename(
+    "Jahr" = "StichtagDat",
+    "Kreis" = "KreisSort",
+    "Anzahl Leerwohnungen" = "AnzLeerWhg",
+    "Anzahl Wohnungen" = "AnzWhg"
+  )
 
 
 
@@ -142,7 +184,7 @@ ui <- page_navbar(
                         plotlyOutput(outputId = "staatsausgaben"))
             )),
   nav_panel(title = "Diverses",
-            navset_pill(
+            navset_card_pill(
               nav_panel(
                 title = "Hundenamen",
                 layout_columns(
@@ -157,6 +199,26 @@ ui <- page_navbar(
                       textOutput("anzahl_hundenamen")
                     )
                   )
+                )
+              ),
+              nav_panel(
+                title = "Leerwohnungsziffer",
+                layout_sidebar(
+                  sidebar = sidebar(
+                    h3("Wohnungsnot in Zürich"),
+                    p("Die Zürcher Wohnungsnot charakterisiert die reichste Stadt der Welt seit Langem.
+                      Die folgenden Darstellungen zeigen Entwicklungen einiger Schlüsselziffern
+                      über die letzten 15 Jahre auf. Sogar mit Pastelfarbe"),
+                    selectizeInput(
+                      "zhwhg",
+                      "Wähle eine anzuzeigende Variable:",
+                      list(
+                        "Anzahl Wohnungen total" = "awt",
+                        "Anzahl Leerwohnungen" = "alw",
+                        "Leerwohnungsziffer" = "lwz"
+                      )
+                  )),
+                  plotlyOutput("leerwohnungsziffer")
                 )
               )
             )),
@@ -305,7 +367,8 @@ server <- function(input, output){
         y = "Anzahl",
         title = "Zürichs beliebteste Hundenamen 2024"
       ) +
-      theme_minimal(base_size = 15)
+      theme_minimal(base_size = 15) +
+      scale_color_manual(values = paletteer_dynamic("cartography::pastel.pal", 12))
   })
   
   # Seite: Diverses, Text: Anzahl Hundenamen
@@ -324,6 +387,43 @@ server <- function(input, output){
   
  output$anzahl_hundenamen <- renderText({text_ausgabe()})
   
+ 
+ # Seite: Diverses, Plot: Leerwohnungen
+ output$leerwohnungsziffer <- renderPlotly({
+   plot_leerwohnungen <- ggplot(leerwohnungen, aes(x = Jahr, colour = factor(Kreis, levels = 1:12))) +
+     labs(
+       x = "Jahr",
+       title = "Entwicklung der Wohnsituation in Zürich 2009 bis 2024",
+       color = "Kreis"
+     ) +
+     theme_minimal() +
+     scale_color_manual(values = paletteer_dynamic("cartography::pastel.pal", 12))
+   
+   if ("awt" %in% input$zhwhg) {
+     plot_leerwohnungen <- plot_leerwohnungen + 
+       geom_line(aes(y = `Anzahl Wohnungen`), linewidth = 1.2) +
+       geom_point(aes(y = `Anzahl Wohnungen`), size = 3) +
+       labs(y = "Anzahl Wohnungen Total")
+   }
+   
+   if ("alw" %in% input$zhwhg) {
+     plot_leerwohnungen <- plot_leerwohnungen + 
+       geom_line(aes(y = `Anzahl Leerwohnungen`), linewidth = 1.2) +
+       geom_point(aes(y = `Anzahl Leerwohnungen`), size = 3) +
+       labs(y = "Anzahl leere Wohnungen")
+   }
+   
+   if ("lwz" %in% input$zhwhg) {
+     plot_leerwohnungen <- plot_leerwohnungen + 
+       geom_line(aes(y = Leerwohnungsziffer), linewidth = 1.2) +
+       geom_point(aes(y = Leerwohnungsziffer), size = 3) +
+       labs(y = "Leerwohnungsziffer in Prozenten")
+   }
+   
+   ggplotly(plot_leerwohnungen)
+   
+   
+ })
   
 }
 
