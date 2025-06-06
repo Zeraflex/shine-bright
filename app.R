@@ -107,6 +107,28 @@ leerwohnungen <- leerwohnungen %>%
   )
 
 
+# Kanton Zürich Steuerdaten nach Vermögen
+ktzh_wealth <- read_csv("https://www.web.statistik.zh.ch/ogd/daten/ressourcen/KTZH_00000723_00003381.csv")
+ktzh_wealth <- ktzh_wealth %>%
+  mutate(vermoegensklasse = case_match(vermoegensklasse,
+                                       "0  -  999" ~ "Unter 1k",
+                                       "1000  -  99999" ~ "1-99k",
+                                       "100000  -  199999" ~ "100-199k",
+                                       "200000  -  299999" ~ "200-299k",
+                                       "300000  -  399999" ~ "300-399k",
+                                       "400000  -  499999" ~ "400-499k",
+                                       "500000  -  599999" ~ "500-599k",
+                                       "600000  -  699999" ~ "600-699k",
+                                       "700000  -  799999" ~ "700-799k",
+                                       "800000  -  899999" ~ "800-899k",
+                                       "900000  -  999999" ~ "900-999k",
+                                       "1000000  -  1499999" ~ "1-1.5m",
+                                       "1500000  -  1999999" ~ "1.5-2m",
+                                       "2000000  -  4999999" ~ "2-5m",
+                                       "5000000  -  Inf" ~ "Über 5m",
+                                       .default = vermoegensklasse))
+ktzh_wealth$vermoegensklasse <- factor(ktzh_wealth$vermoegensklasse, levels = unique(ktzh_wealth$vermoegensklasse))
+
 
 # User Interface ----
 ui <- page_navbar(
@@ -131,7 +153,7 @@ ui <- page_navbar(
                     card_image("data/ft_gender_divergence.jpg",
                                style = "display: block; margin-left: auto; margin-right: auto; width: 70%;",
                                href = "https://www.ft.com/content/29fd9b5c-2f35-41bf-9d4c-994db4e12998"),
-                    card_body("Graphische Aufarbeitung von John Burn-Murdoch"),
+                    card_body("Graphische Aufarbeitung von John Rupert-Murdoch"),
                     card_footer("Quelle: Financial Times"),
                     style = "background-color: #FFF1E0"
                   ),
@@ -170,10 +192,43 @@ ui <- page_navbar(
                         plotlyOutput(outputId = "bip_lange_frist") # Plotly Output
               ),
               nav_panel(title = "Zentralbankunabhängigkeit",
-                        plotlyOutput(outputId = "zentralbank"))
-            )
-              
-          
+                        plotlyOutput(outputId = "zentralbank")
+              ),
+              nav_panel(title = "Vermögen im Kanton Zürich", # Darstellung von Vermögenssteuerdaten
+                        layout_sidebar(
+                          sidebar = sidebar(
+                            h5("Über Geld spricht man"),
+                            p("Ein Überblick über die Vermögensverteilung im Kanton Zürich, 
+                              basierend auf einem öffentlich zugänglichen Datensatz des Statistischen Amtes."),
+                            selectInput(inputId = "select_y_ktzh_wealth",
+                                        label = "Wähle eine Variable:",
+                                        list("Anzahl Steuerpflichtige" = "numtaxpayers",
+                                             "Steuerbares Vermögen (Mio.)" = "wealth",
+                                             "Anteil Steuerpflichtige (%)" = "sharetaxpayers",
+                                             "Anteil des Gesamtvermögens" = "sharewealth",
+                                             "Anteil der Vermögenssteuer" = "sharetax")),
+                            sliderInput(inputId = "slider_year_ktzh_wealth",
+                                        label = "Wähle ein Jahr:",
+                                        min = min(ktzh_wealth$steuerjahr), 
+                                        max = max(ktzh_wealth$steuerjahr),
+                                        sep = "",
+                                        step = 1,
+                                        value = max(ktzh_wealth$steuerjahr))),
+                          layout_columns(
+                            card(
+                              card_header("Balkendiagramm"),
+                              plotOutput("ktzh_wealth_col"),
+                              card_footer("Quelle: Statistisches Amt des Kantons Zürich")
+                            ),
+                            card(
+                              card_header("Kuchendiagramm"),
+                              plotOutput("ktzh_wealth_cake"),
+                              card_footer("Quelle: Statistisches Amt des Kantons Zürich")
+                            )
+                          )
+                          )
+                        )
+              )
   ),
   nav_panel(title = "Politisches",
             navset_card_pill(
@@ -424,9 +479,112 @@ server <- function(input, output){
    
    
  })
-  
-}
+ 
+ 
+ # Seite Econ, Plot Zürcher Vermögensverteilung
+ 
+ # Reaktivfunktion zur Auswahl des Jahres
+ ktzh_wealth_yearly <- reactive({
+   ktzh_wealth[ktzh_wealth$steuerjahr == input$slider_year_ktzh_wealth, ]
+ })
+ 
+ 
+ # Column Plot
+ output$ktzh_wealth_col <- renderPlot({
+   
+   # Transformation Reaktivfunktionsoutput in Data Frame
+   ktzh_wealth_yearly <- ktzh_wealth_yearly()
+   
+   plot_ktzh_wealth_col <- ggplot(ktzh_wealth_yearly, aes(x = vermoegensklasse)) +
+     labs(x = "Vermögensklasse") +
+     theme_minimal(base_size = 15) +
+     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+     scale_y_continuous(labels = comma)
 
+     
+   if ("numtaxpayers" %in% input$select_y_ktzh_wealth){
+     plot_ktzh_wealth_col <- plot_ktzh_wealth_col +
+       geom_col(aes(y = anzahl_pflichtige), fill = "mediumpurple3") +
+       labs(y = "Anzahl Steuerpflichtige")
+   }
+   
+   if ("wealth" %in% input$select_y_ktzh_wealth){
+     plot_ktzh_wealth_col <- plot_ktzh_wealth_col +
+       geom_col(aes(y = steuerbares_vermoegen_in_mio), fill = "mediumpurple3") +
+       labs(y = "Steuerbares Vermögen in Millionen")
+   }
+   
+   if ("sharetaxpayers" %in% input$select_y_ktzh_wealth){
+     plot_ktzh_wealth_col <- plot_ktzh_wealth_col +
+       geom_col(aes(y = anteil_pflichtige), fill = "mediumpurple3") +
+       labs(y = "Anteil Steuerzahler:innen")
+   }
+   
+   if ("sharewealth" %in% input$select_y_ktzh_wealth){
+     plot_ktzh_wealth_col <- plot_ktzh_wealth_col +
+       geom_col(aes(y = anteil_vermoegen), fill = "mediumpurple3") +
+       labs(y = "Anteil am Gesamtvermögen")
+   }
+   
+   if ("sharetax" %in% input$select_y_ktzh_wealth){
+     plot_ktzh_wealth_col <- plot_ktzh_wealth_col +
+       geom_col(aes(y = anteil_steuer), fill = "mediumpurple3") +
+       labs(y = "Anteil an Vermögenssteuer")
+   }
+   plot_ktzh_wealth_col
+ }) 
+ 
+ # Kuchendiagramm
+ output$ktzh_wealth_cake <- renderPlot({
+   
+   # Transformation Reaktivfunktionsoutput in Data Frame
+   ktzh_wealth_yearly <- ktzh_wealth_yearly()
+   
+   plot_ktzh_wealth_cake <- ggplot(ktzh_wealth_yearly, aes(x = "", fill = vermoegensklasse)) +
+     theme_void(base_size = 15) +
+     scale_color_manual(values = paletteer_d("ggthemes::Hue_Circle")) +
+     guides(fill = guide_legend(title = "Vermögensklasse"))
+   
+   if ("numtaxpayers" %in% input$select_y_ktzh_wealth){
+     plot_ktzh_wealth_cake <- plot_ktzh_wealth_cake +
+       geom_col(aes(y = anzahl_pflichtige)) +
+       coord_polar(theta = "y") +
+       labs(y = "Anzahl Steuerpflichtige",
+            x = "")
+   }
+   
+   if ("wealth" %in% input$select_y_ktzh_wealth){
+     plot_ktzh_wealth_cake <- plot_ktzh_wealth_cake +
+       geom_col(aes(y = steuerbares_vermoegen_in_mio)) +
+       coord_polar(theta = "y") +
+       labs(y = "Steuerbares Vermögen in Millionen")
+   }
+   
+   if ("sharetaxpayers" %in% input$select_y_ktzh_wealth){
+     plot_ktzh_wealth_cake <- plot_ktzh_wealth_cake +
+       geom_col(aes(y = anteil_pflichtige)) +
+       coord_polar(theta = "y") +
+       labs(y = "Anteil Steuerzahler:innen")
+   }
+   
+   if ("sharewealth" %in% input$select_y_ktzh_wealth){
+     plot_ktzh_wealth_cake <- plot_ktzh_wealth_cake +
+       geom_col(aes(y = anteil_vermoegen)) +
+       coord_polar(theta = "y") +
+       labs(y = "Anteil am Gesamtvermögen")
+   }
+   
+   if ("sharetax" %in% input$select_y_ktzh_wealth){
+     plot_ktzh_wealth_cake <- plot_ktzh_wealth_cake +
+       geom_col(aes(y = anteil_steuer)) +
+       coord_polar(theta = "y") +
+       labs(y = "Anteil an Vermögenssteuer")
+   }
+   plot_ktzh_wealth_cake
+ })
+ 
+ 
+}
 
 
 
