@@ -5,6 +5,9 @@ library(scales)
 library(readxl)
 library(plotly)
 library(paletteer)
+library(httr)
+library(jsonlite)
+library(waffle)
 
 
 
@@ -140,33 +143,26 @@ ui <- page_navbar(
                   width = 1,
                   card(
                     card_header("Salli!"),
-                    card_body("Disclaimer: Diese App ist ein sich im Aufbau befindender Spielplatz
-                              für R Shiny und soll nicht zu ernst genommen werden. 
-                              Die verwendeten Daten sind alle Open Source. Viel Spass!"),
-                    style = "background-color: #94ebff"
+                    card_body(
+                    h1("Disclaimer"),
+                    h4("Not to be taken too seriously. Die verwendeten Daten sind alle Open Source.")),
+                    style = "background-color: #eccfff"
                   )
                 ),
                 layout_column_wrap(
                   width = 1,
                   card(
-                    card_header("Ein tolle datenjournalistische Story"),
+                    card_header("Splendid work"),
                     card_image("data/ft_gender_divergence.jpg",
                                style = "display: block; margin-left: auto; margin-right: auto; width: 70%;",
                                href = "https://www.ft.com/content/29fd9b5c-2f35-41bf-9d4c-994db4e12998"),
-                    card_body("Graphische Aufarbeitung von John Rupert-Murdoch"),
+                    card_body("Graphische Aufarbeitung von John Burn-Murdoch"),
                     card_footer("Quelle: Financial Times"),
                     style = "background-color: #FFF1E0"
                   ),
                   card(
-                    card_header("Irgende Inhalt"),
-                    card_body("Lorem ipsum dolor sit amet, consetetur sadipscing elitr, 
-                              sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, 
-                              sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. 
-                              Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. 
-                              Lorem ipsum dolor sit amet, consetetur sadipscing elitr, 
-                              sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, 
-                              sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. 
-                              Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.")
+                    card_header("just waffling around"),
+                    card_body(plotOutput(outputId = "Waffel"))
                   )
                 ),
                 col_widths = c(4,8)
@@ -238,7 +234,7 @@ ui <- page_navbar(
               nav_panel(title = "Staatsausgaben",
                         plotlyOutput(outputId = "staatsausgaben"))
             )),
-  nav_panel(title = "Diverses",
+  nav_panel(title = "Zurigo",
             navset_card_pill(
               nav_panel(
                 title = "Hundenamen",
@@ -286,6 +282,15 @@ ui <- page_navbar(
 # Server Function ----
 server <- function(input, output){
   
+  ### Startseite
+  output$Waffel <- renderPlot({
+    sirup <- c(6,5,1,4,2,3,3,4,2,5,1,6)
+    waffle(sirup, rows = 3, legend_pos = "none", size = 1,
+           colors = c("#bef7ff", "#bfe9ff", "#c1daff", "#c2cbff", "#c3bcff", "#c5adff",
+                      "#c69cff", "#c88bff", "#c978ff", "#cb62ff", "#ce47ff", "#d400ff"))
+  })
+
+  
   ### Seite 1 Plot 1 ###
   
   # Reaktiver Dateninput
@@ -317,7 +322,7 @@ server <- function(input, output){
       labs(x = "Jahr", y = "CHF", title = "BIP pro Kopf Entwicklung") +
       scale_color_manual(values = c("Nominell" = "brown3", "Real" = "brown4"),
                          name = "Legende") +
-      theme_minimal(base_size = 15)
+      theme_minimal(base_size = 12)
   })
   
   
@@ -330,7 +335,7 @@ server <- function(input, output){
       geom_line(color = "firebrick3", linewidth = 1.5) +
       labs(x = "Jahr", y = "Millionen Franken", title = "Langfristige BIP Entwicklung") +
       scale_y_continuous(labels = label_comma(big.mark = "'")) +
-      theme_minimal(base_size = 15)
+      theme_minimal(base_size = 12)
     
     # Plotly Plot aufrufen
     ggplotly(plot2)
@@ -349,7 +354,7 @@ server <- function(input, output){
         y = "Anzahl Sitze",
         fill = "Partei"
       ) +
-      theme_minimal(base_size = 15) +
+      theme_minimal(base_size = 12) +
       scale_fill_manual(values = c(
         "FDP" = "#0074BE",
         "CVP" = "#F28C00",
@@ -364,7 +369,7 @@ server <- function(input, output){
     ggplotly(plot3)
   })
   
-  
+
   # Seite Poltio, Plot: Staatsausgaben
   output$staatsausgaben <- renderPlotly({
     plot4 <- ggplot(staatsausgaben_long, aes(x = Jahr, y = Ausgaben, fill = Ausgabengebiet)) +
@@ -375,20 +380,20 @@ server <- function(input, output){
         y = "Anteil"
       ) +
       scale_fill_manual(
-        values = c("Beziehungen zum Ausland" = "antiquewhite3",
-                   "Bildung und Forschung" = "cornflowerblue",
-                   "Finanzen und Steuern" = "bisque1",
-                   "Gesundheit" = "darkolivegreen3",
-                   "Institutionelle und Finanzielle Voraussetzungen" = "darksalmon",
-                   "Kultur und Freizeit" = "darkorchid",
-                   "Landwirtschaft und Ernährung" = "darkslategrey",
-                   "Sicherheit" = "gold2",
-                   "Soziale Wohlfahrt" = "deeppink3",
-                   "Umwelt und Raumordnung" = "deepskyblue3",
-                   "Verkehr" = "grey80",
-                   "Wirtschaft" = "cyan2")
+        values = c("Beziehungen zum Ausland" = "#004586",
+                   "Bildung und Forschung" = "#FF420E",
+                   "Finanzen und Steuern" = "#FFD320",
+                   "Gesundheit" = "#579D1C",
+                   "Institutionelle und Finanzielle Voraussetzungen" = "#7E0021",
+                   "Kultur und Freizeit" = "#83CAFF",
+                   "Landwirtschaft und Ernährung" = "#314004",
+                   "Sicherheit" = "#AECF00",
+                   "Soziale Wohlfahrt" = "#4B1F6F",
+                   "Umwelt und Raumordnung" = "#FF950E",
+                   "Verkehr" = "#C5000B",
+                   "Wirtschaft" = "#0084D1")
       ) +
-      theme_minimal(base_size = 15) +
+      theme_minimal(base_size = 12) +
       scale_x_continuous(breaks = seq(1990, 2028, by = 5)) +
       geom_rect(aes(xmin = 2025, xmax = 2028, ymin = 0, ymax = 1),
                 fill = "grey70", alpha = 0.01, inherit.aes = FALSE)
@@ -401,7 +406,7 @@ server <- function(input, output){
   output$zentralbank <- renderPlotly({
     plot_cbi <- ggplot(cbi_data, aes(x = Jahr, y = `CBI Index`)) +
       geom_line(color = "coral3") +
-      theme_minimal(base_size = 15) +
+      theme_minimal(base_size = 10) +
       labs(
         title = "Entwicklung der Zentralbankunabhängigkeit",
         x = "Jahr",
